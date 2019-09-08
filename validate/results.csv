@@ -1,0 +1,5 @@
+Result, Problem Regex, Controller, Application, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups, ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups 
+Pass, , http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090, TestAPM1, CONTAINS, IgnoredExceptions, None, EQUALS, IgnoredMessages, None 
+Pass, , http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090, TestAPM4, REGEX, /^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/, None, REGEX, \d{5}(-\d{4})?, None 
+Pass, , http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090, TestAPM3, REGEX, myExceptionMessage, None, REGEX, \d{5}(-\d{4})?, None 
+Fail, set(['myErrorMessage']) - , http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090, TestAPM2, REGEX, myExceptionMessage, None, REGEX, myErrorMessage, None 

@@ -1,0 +1,26 @@
+[
+    {
+    "agentType": "APP_AGENT",
+    "description": "",
+    "id": 12,
+    "name": "E-Commerce",
+    "numberOfNodes": 2,
+    "type": "Application Server"
+  },
+    {
+    "agentType": "APP_AGENT",
+    "description": "",
+    "id": 13,
+    "name": "Inventory",
+    "numberOfNodes": 1,
+    "type": "Application Server"
+  },
+    {
+    "agentType": "APP_AGENT",
+    "description": "",
+    "id": 14,
+    "name": "Order Processing",
+    "numberOfNodes": 1,
+    "type": "Application Server"
+  }
+]

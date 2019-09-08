@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BackendResponseTimes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Controller="http://localhost:8080/controller/rest" GenerationTime="2013-06-14T21:50:41.100883-04:00" xsi:noNamespaceSchemaLocation="../examples/xsd/backend_metrics.xsd">
+  <Backend>
+    <ApplicationName>ACME Book Store Application</ApplicationName>
+    <BackendName>Discovered backend call - APPDY-MySQL DB-LOCALHOST</BackendName>
+    <AverageResponseTime>0</AverageResponseTime>
+    <CallsPerMinute>0</CallsPerMinute>
+    <TotalCalls>0</TotalCalls>
+    <MaximumCallsPerMinute>0</MaximumCallsPerMinute>
+    <MaximumCallTime></MaximumCallTime>
+    <ErrorsPerMinute>0</ErrorsPerMinute>
+    <TotalErrors>0</TotalErrors>
+    <MaximumErrorsPerMinute>0</MaximumErrorsPerMinute>
+    <MaximumErrorTime></MaximumErrorTime>
+  </Backend>
+  <Backend>
+    <ApplicationName>ACME Book Store Application</ApplicationName>
+    <BackendName>Discovered backend call - Active MQ-OrderQueue</BackendName>
+    <AverageResponseTime>0</AverageResponseTime>
+    <CallsPerMinute>0</CallsPerMinute>
+    <TotalCalls>0</TotalCalls>
+    <MaximumCallsPerMinute>0</MaximumCallsPerMinute>
+    <MaximumCallTime></MaximumCallTime>
+    <ErrorsPerMinute>0</ErrorsPerMinute>
+    <TotalErrors>0</TotalErrors>
+    <MaximumErrorsPerMinute>0</MaximumErrorsPerMinute>
+    <MaximumErrorTime></MaximumErrorTime>
+  </Backend>
+  <Backend>
+    <ApplicationName>ACME Book Store Application</ApplicationName>
+    <BackendName>Discovered backend call - INVENTORY-MySQL DB-LOCALHOST</BackendName>
+    <AverageResponseTime>0</AverageResponseTime>
+    <CallsPerMinute>0</CallsPerMinute>
+    <TotalCalls>0</TotalCalls>
+    <MaximumCallsPerMinute>0</MaximumCallsPerMinute>
+    <MaximumCallTime></MaximumCallTime>
+    <ErrorsPerMinute>0</ErrorsPerMinute>
+    <TotalErrors>0</TotalErrors>
+    <MaximumErrorsPerMinute>0</MaximumErrorsPerMinute>
+    <MaximumErrorTime></MaximumErrorTime>
+  </Backend>
+  <Backend>
+    <ApplicationName>ACME Book Store Application</ApplicationName>
+    <BackendName>Discovered backend call - Oracle - 10.0.0</BackendName>
+    <AverageResponseTime>0</AverageResponseTime>
+    <CallsPerMinute>0</CallsPerMinute>
+    <TotalCalls>0</TotalCalls>
+    <MaximumCallsPerMinute>0</MaximumCallsPerMinute>
+    <MaximumCallTime></MaximumCallTime>
+    <ErrorsPerMinute>0</ErrorsPerMinute>
+    <TotalErrors>0</TotalErrors>
+    <MaximumErrorsPerMinute>0</MaximumErrorsPerMinute>
+    <MaximumErrorTime></MaximumErrorTime>
+  </Backend>
+  <Backend>
+    <ApplicationName>ACME Book Store Application</ApplicationName>
+    <BackendName>Inventory Server</BackendName>
+    <AverageResponseTime>0</AverageResponseTime>
+    <CallsPerMinute>0</CallsPerMinute>
+    <TotalCalls>0</TotalCalls>
+    <MaximumCallsPerMinute>0</MaximumCallsPerMinute>
+    <MaximumCallTime></MaximumCallTime>
+    <ErrorsPerMinute>0</ErrorsPerMinute>
+    <TotalErrors>0</TotalErrors>
+    <MaximumErrorsPerMinute>0</MaximumErrorsPerMinute>
+    <MaximumErrorTime></MaximumErrorTime>
+  </Backend>
+</BackendResponseTimes>
+

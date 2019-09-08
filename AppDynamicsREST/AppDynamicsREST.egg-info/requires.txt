@@ -1,0 +1,12 @@
+requests
+argparse
+future
+pycurl
+
+[examples]
+lxml
+tzlocal
+jinja2
+
+[testing]
+nose

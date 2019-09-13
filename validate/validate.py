@@ -2,18 +2,59 @@ import requests
 import json
 import csv
 import os
+import sys
 import uuid
+
+import funcy
+import base64
+import Crypto.Protocol
+from Crypto.Cipher import AES
+
 from AppDynamicsREST.appd.request import AppDynamicsClient
 
 # variables
-controllerURL = 'http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090'
-accountName = 'customer1'
-username = 'admin'
-password = 'admin'
-application = 'app1'
+#controllerURL = 'http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090'
+#accountName = 'customer1'
+#username = 'admin'
+#password = 'admin'
+#application = 'app1'
 
 loginQuery = '/controller/auth?action=login'
 errorDetectionRulesQuery = '/controller/restui/applicationManagerUiBean/applicationConfiguration/'
+
+
+def decrypt_file(file_name, encrypt_key):
+    if isinstance(file_name, str) and isinstance(encrypt_key, str):
+        print ("Decrypting the file ...")
+    else:
+        print("Argument to decrpyt_file function is incorrect. Aborting the program!")
+        sys.exit(0)
+
+    with open(file_name, "rb") as encryptedFile:
+        chunk_size = 24 * 1024
+        encrypted = base64.b64decode(encryptedFile.read(64))
+        setup = encrypted[:48]
+        # key_confirm = input("Please enter the key used to encrypt the file:- ")
+        salt = b'\x9aX\x10\xa6^\x1fUVu\xc0\xa2\xc8\xff\xceOV'
+        key_check = Crypto.Protocol.KDF.PBKDF2(password=encrypt_key, salt=salt, dkLen=32, count=10000)
+
+        def unpad(s):
+            return s[:-ord(s[len(s) - 1:])]
+
+        if key_check == setup[:32]:
+            print("Password Correct!")
+        else:
+            print("Wrong Password!")
+            sys.exit(0)
+
+        iv = setup[32:]
+        cipher = AES.new(key_check, AES.MODE_CBC, iv)
+        with open('controllers.csv', "wb") as decryptedFile:
+            encrypted = base64.b64decode(encryptedFile.read())
+            chunks = list(funcy.chunks(chunk_size, encrypted))
+            for chunk in chunks:
+                decrypted_chunk = unpad(cipher.decrypt(chunk))
+                decryptedFile.write(decrypted_chunk)
 
 
 def apply_exceptions_match_rules(pattern):
@@ -80,12 +121,13 @@ def validate_error_detection_rules(app):
 def read_controller_info(row):
     values = []
     count = 0
+    
     for col in row:
         if count == 0:
-            controllerURL = col
+            controller_url = col
         # print("%10s"%col)
         if count == 1:
-            accountName = col
+            account_name = col
         # print("%10s"%col)
         if count == 2:
             username = col
@@ -96,10 +138,14 @@ def read_controller_info(row):
         if count == 4:
             application = col
         # print("%10s"%col)
+        count += 1
+    return controller_url, username, password, account_name
 
-def get_appdynamics_client():
-    cli = AppDynamicsClient(controllerURL, username, password, accountName)
+
+def get_appdynamics_client(controller_url, username, password, account_name):
+    cli = AppDynamicsClient(controller_url, username, password, account_name)
     return cli
+
 
 def generate_controller_api_session():
     user = username + '@' + accountName
@@ -121,6 +167,7 @@ def generate_controller_api_session():
     }
     return headers, cookies
 
+
 def get_error_detection_rules(app_id):
     url = '{0}{1}{2}'.format(controllerURL, errorDetectionRulesQuery, app_id)
     headers, cookies = generate_controller_api_session()
@@ -128,10 +175,23 @@ def get_error_detection_rules(app_id):
     rules = json.loads(res.text)
     return rules
 
+
 def start():
-    # Controller input file name
-    controller_list = "default.csv"
     output_filename = "results.csv"
+    controller_list = 'controllers.csv'
+    encrypted_controller_list = input("Enter the encrypted file name: ")
+
+    if os.path.exists(encrypted_controller_list):
+        print("Reading the file ...\n Output file name is %s" % output_filename)
+    else:
+        print("File does not exist. Trying to read the default file: 'controllers.csv.aes")
+        if os.path.exists("controllers.csv.aes"):
+            print("Reading the default file - 'controllers.csv.aes' ... \n Output file name is %s" % output_filename)
+            encrypted_controller_list = 'controllers.csv.aes'
+        else:
+            print("Default file 'controllers.csv.aes' does not exist. Aborting the program!")
+            sys.exit(0)
+    secret = input("Enter the password to decrypt the file: ")
 
     if os.path.exists(output_filename):
         os.remove(output_filename)
@@ -141,21 +201,39 @@ def start():
         "ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups \n")
     results_file.close()
 
-    # initializing the titles and rows list
-    rows = []
-
+    decrypt_file(encrypted_controller_list, secret)
     # reading csv file
-    with open(controller_list, 'r') as csvfile:
-        csvreader = csv.reader(csvfile)
+    print os.path.abspath(controller_list)
+    with open(controller_list, 'r') as f:
+        if sum(1 for line in f) < 2:
+            print("Input file - %s - has no controllers listed or file is incorrectly formatted!\n"
+                  "Refer to template.csv for correct format.\n Aborting the program!")
+            sys.exit(-1)
+        else:
+            print("Reading the file...")
+    with open(controller_list, 'r') as csvfile1:
+        # csvfile = cryptoTool.decrypt_filestream(csvfile1, secret)
+        csvreader = csv.reader(csvfile1)
+        # os.remove(controller_list)
         next(csvreader)
         for row in csvreader:
-            read_controller_info(row)
-            cli = get_appdynamics_client()
+            controller_url, username, password, account_name = read_controller_info(row)
+            cli = get_appdynamics_client(controller_url, username, password, account_name)
             for app in cli.get_applications():
                 print("App Name -- %s,  App Id -- %s" % (app.name, app.id))
                 validate_error_detection_rules(app)
 
 
+# def enc(file_name, password):
+#     cryptoTool.encrypt_file(file_name, password)
+#
+#
+# def dec(file_name, password):
+#     cryptoTool.decrypt_file(file_name, password)
+
+
 if __name__ == '__main__':
     start()
+    # enc('temp.csv', 'pass')
+    # dec('temp.csv.aes', 'pass')
 

@@ -1,4 +1,6 @@
 import requests
+import logging
+import logging.handlers
 import json
 import csv
 import os
@@ -21,6 +23,13 @@ from AppDynamicsREST.appd.request import AppDynamicsClient
 
 loginQuery = '/controller/auth?action=login'
 errorDetectionRulesQuery = '/controller/restui/applicationManagerUiBean/applicationConfiguration/'
+
+handler = logging.handlers.WatchedFileHandler(os.environ.get("LOGFILE", "./validateDetectRules.log"))
+formatter = logging.Formatter(logging.BASIC_FORMAT)
+handler.setFormatter(formatter)
+root = logging.getLogger()
+root.setLevel(os.environ.get("LOGLEVEL", "INFO"))
+root.addHandler(handler)
 
 
 def decrypt_file(file_name, encrypt_key):
@@ -79,10 +88,10 @@ def apply_logger_match_rules(pattern):
     return ret, match
 
 
-def validate_error_detection_rules(app):
+def validate_error_detection_rules(controller_url, username, password, account_name, app):
     result = 'Pass'
     problem_regex = ''
-    rules = get_error_detection_rules(app.id)
+    rules = get_error_detection_rules(controller_url, username, password, account_name, app.id)
     ignore_exp_match_type = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchType']
     ignore_exp_match_pattern = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchPattern']
     ignore_exp_regex_groups = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['regexGroups']
@@ -113,7 +122,7 @@ def validate_error_detection_rules(app):
             problem_regex = str(match2) + " - " + problem_regex
         print ("%r ::: %r" % (result2, match2))
     f.write("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s \n" % (
-        result, problem_regex, controllerURL, app.name, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups,
+        result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups,
         ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups))
     f.close()
 
@@ -121,7 +130,7 @@ def validate_error_detection_rules(app):
 def read_controller_info(row):
     values = []
     count = 0
-    
+
     for col in row:
         if count == 0:
             controller_url = col
@@ -147,9 +156,9 @@ def get_appdynamics_client(controller_url, username, password, account_name):
     return cli
 
 
-def generate_controller_api_session():
-    user = username + '@' + accountName
-    response = requests.get(controllerURL + loginQuery, auth=(user, password))
+def generate_controller_api_session(controller_url, username, password, account_name):
+    user = username + '@' + account_name
+    response = requests.get(controller_url + loginQuery, auth=(user, password))
     # print(response.cookies)
     for c in response.cookies:
         if c.name == 'JSESSIONID':
@@ -168,15 +177,16 @@ def generate_controller_api_session():
     return headers, cookies
 
 
-def get_error_detection_rules(app_id):
-    url = '{0}{1}{2}'.format(controllerURL, errorDetectionRulesQuery, app_id)
-    headers, cookies = generate_controller_api_session()
+def get_error_detection_rules(controller_url, username, password, account_name, app_id):
+    url = '{0}{1}{2}'.format(controller_url, errorDetectionRulesQuery, app_id)
+    headers, cookies = generate_controller_api_session(controller_url, username, password, account_name)
     res = requests.get(url, headers=headers, cookies=cookies)
     rules = json.loads(res.text)
     return rules
 
 
 def start():
+    logging.info("Starting the program...")
     output_filename = "results.csv"
     controller_list = 'controllers.csv'
     encrypted_controller_list = input("Enter the encrypted file name: ")
@@ -219,9 +229,10 @@ def start():
         for row in csvreader:
             controller_url, username, password, account_name = read_controller_info(row)
             cli = get_appdynamics_client(controller_url, username, password, account_name)
+
             for app in cli.get_applications():
                 print("App Name -- %s,  App Id -- %s" % (app.name, app.id))
-                validate_error_detection_rules(app)
+                validate_error_detection_rules(controller_url, username, password, account_name, app)
 
 
 # def enc(file_name, password):

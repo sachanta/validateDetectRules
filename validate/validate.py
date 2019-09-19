@@ -5,7 +5,6 @@ import json
 import csv
 import os
 import sys
-import uuid
 
 import funcy
 import base64
@@ -90,20 +89,37 @@ def apply_logger_match_rules(pattern):
 
 def validate_error_detection_rules(controller_url, username, password, account_name, app):
     result = 'Pass'
+    write_row = False
     problem_regex = ''
+    ignore_exp_match_type = ''
+    ignore_exp_match_pattern = ''
+    ignore_exp_regex_groups = ''
+    ignore_logger_match_type = ''
+    ignore_logger_match_pattern = ''
+    ignore_logger_regex_groups = ''
+
     rules = get_error_detection_rules(controller_url, username, password, account_name, app.id)
-    ignore_exp_match_type = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchType']
-    ignore_exp_match_pattern = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchPattern']
-    ignore_exp_regex_groups = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['regexGroups']
-    print('App Name: %s --- IgnoreExceptions MatchType: %r' % (app.name, ignore_exp_match_type))
-    print('App Name: %s --- IgnoreExceptions MatchPattern: %r' % (app.name, ignore_exp_match_pattern))
-    print('App Name: %s --- IgnoreExceptions Regex Groups: %r' % (app.name, ignore_exp_regex_groups))
-    ignore_logger_match_type = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchType']
-    ignore_logger_match_pattern = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchPattern']
-    ignore_logger_regex_groups = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['regexGroups']
-    print('App Name: %s --- IgnoreLogger MatchType: %r' % (app.name, ignore_logger_match_type))
-    print('App Name: %s --- IgnoreLogger MatchPattern: %r' % (app.name, ignore_logger_match_pattern))
-    print('App Name: %s --- IgnoreLogger Regex Groups: %r' % (app.name, ignore_logger_regex_groups))
+    if rules is None:
+        return
+    if rules['errorConfig']['ignoreExceptionMsgPatterns']:
+        ignore_exp_match_type = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchType']
+    if rules['errorConfig']['ignoreExceptionMsgPatterns']:
+        ignore_exp_match_pattern = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchPattern']
+    if rules['errorConfig']['ignoreExceptionMsgPatterns']:
+        ignore_exp_regex_groups = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['regexGroups']
+    # print('App Name: %s --- IgnoreExceptions MatchType: %r' % (app.name, ignore_exp_match_type))
+    # print('App Name: %s --- IgnoreExceptions MatchPattern: %r' % (app.name, ignore_exp_match_pattern))
+    # print('App Name: %s --- IgnoreExceptions Regex Groups: %r' % (app.name, ignore_exp_regex_groups))
+    if rules['errorConfig']['ignoreLoggerMsgPatterns']:
+        ignore_logger_match_type = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchType']
+    if rules['errorConfig']['ignoreLoggerMsgPatterns']:
+        ignore_logger_match_pattern = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchPattern']
+    if rules['errorConfig']['ignoreLoggerMsgPatterns']:
+        ignore_logger_regex_groups = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['regexGroups']
+    # print('App Name: %s --- IgnoreLogger MatchType: %r' % (app.name, ignore_logger_match_type))
+    # print('App Name: %s --- IgnoreLogger MatchPattern: %r' % (app.name, ignore_logger_match_pattern))
+    # print('App Name: %s --- IgnoreLogger Regex Groups: %r' % (app.name, ignore_logger_regex_groups))
+
     f = open('results.csv', "a")
     #
     if ignore_exp_match_type == 'REGEX':
@@ -180,7 +196,11 @@ def generate_controller_api_session(controller_url, username, password, account_
 def get_error_detection_rules(controller_url, username, password, account_name, app_id):
     url = '{0}{1}{2}'.format(controller_url, errorDetectionRulesQuery, app_id)
     headers, cookies = generate_controller_api_session(controller_url, username, password, account_name)
-    res = requests.get(url, headers=headers, cookies=cookies)
+    try:
+        res = requests.get(url, headers=headers, cookies=cookies)
+    except requests.exceptions.RequestException as e:
+        logging.error(e)
+        return None
     rules = json.loads(res.text)
     return rules
 
@@ -227,8 +247,16 @@ def start():
         # os.remove(controller_list)
         next(csvreader)
         for row in csvreader:
+            if len(row) < 4:
+                print ("incomplete controller information: %r" % row)
+                break
             controller_url, username, password, account_name = read_controller_info(row)
             cli = get_appdynamics_client(controller_url, username, password, account_name)
+            try:
+                cli.get_applications()
+            except requests.exceptions.RequestException as e:
+                logging.error(e)
+                continue
 
             for app in cli.get_applications():
                 print("App Name -- %s,  App Id -- %s" % (app.name, app.id))

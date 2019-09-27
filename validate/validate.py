@@ -11,14 +11,15 @@ import base64
 import Crypto.Protocol
 from Crypto.Cipher import AES
 
+from fileCrypto import FileCrypto
 from AppDynamicsREST.appd.request import AppDynamicsClient
 
 # variables
-#controllerURL = 'http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090'
-#accountName = 'customer1'
-#username = 'admin'
-#password = 'admin'
-#application = 'app1'
+# controllerURL = 'http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090'
+# accountName = 'customer1'
+# username = 'admin'
+# password = 'admin'
+# application = 'app1'
 
 loginQuery = '/controller/auth?action=login'
 errorDetectionRulesQuery = '/controller/restui/applicationManagerUiBean/applicationConfiguration/'
@@ -31,43 +32,9 @@ root.setLevel(os.environ.get("LOGLEVEL", "INFO"))
 root.addHandler(handler)
 
 
-def decrypt_file(file_name, encrypt_key):
-    if isinstance(file_name, str) and isinstance(encrypt_key, str):
-        print ("Decrypting the file ...")
-    else:
-        print("Argument to decrpyt_file function is incorrect. Aborting the program!")
-        sys.exit(0)
-
-    with open(file_name, "rb") as encryptedFile:
-        chunk_size = 24 * 1024
-        encrypted = base64.b64decode(encryptedFile.read(64))
-        setup = encrypted[:48]
-        # key_confirm = input("Please enter the key used to encrypt the file:- ")
-        salt = b'\x9aX\x10\xa6^\x1fUVu\xc0\xa2\xc8\xff\xceOV'
-        key_check = Crypto.Protocol.KDF.PBKDF2(password=encrypt_key, salt=salt, dkLen=32, count=10000)
-
-        def unpad(s):
-            return s[:-ord(s[len(s) - 1:])]
-
-        if key_check == setup[:32]:
-            print("Password Correct!")
-        else:
-            print("Wrong Password!")
-            sys.exit(0)
-
-        iv = setup[32:]
-        cipher = AES.new(key_check, AES.MODE_CBC, iv)
-        with open('controllers.csv', "wb") as decryptedFile:
-            encrypted = base64.b64decode(encryptedFile.read())
-            chunks = list(funcy.chunks(chunk_size, encrypted))
-            for chunk in chunks:
-                decrypted_chunk = unpad(cipher.decrypt(chunk))
-                decryptedFile.write(decrypted_chunk)
-
-
 def apply_exceptions_match_rules(pattern):
     ret = False
-    matches = ['*.*', 'com.*', 'myErrorMessage']
+    matches = ['*.*', 'com.*', 'myErrorMessage', '.*']
     match = set([])
     for m in matches:
         if m in pattern:
@@ -78,7 +45,7 @@ def apply_exceptions_match_rules(pattern):
 
 def apply_logger_match_rules(pattern):
     ret = False
-    matches = ['*.*', 'com.*', 'myErrorMessage']
+    matches = ['*.*', 'com.*', 'myErrorMessage', '.*']
     match = set([])
     for m in matches:
         if m in pattern:
@@ -121,7 +88,7 @@ def validate_error_detection_rules(controller_url, username, password, account_n
     # print('App Name: %s --- IgnoreLogger Regex Groups: %r' % (app.name, ignore_logger_regex_groups))
 
     f = open('results.csv', "a")
-    #
+    results_writer = csv.writer(f)
     if ignore_exp_match_type == 'REGEX':
         (result1, match1) = apply_exceptions_match_rules(ignore_exp_match_pattern)
         if result1:
@@ -137,10 +104,15 @@ def validate_error_detection_rules(controller_url, username, password, account_n
             # problem_regex = problem_regex + ", " + next(iter(match2), set())
             problem_regex = str(match2) + " - " + problem_regex
         print ("%r ::: %r" % (result2, match2))
-    f.write("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s \n" % (
-        result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups,
-        ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups))
-    f.close()
+    if ignore_exp_match_type == 'REGEX' or ignore_logger_match_type == 'REGEX':
+        # f.write("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s \n" % (
+        #     result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern,
+        #     ignore_exp_regex_groups,
+        #     ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups))
+        results_writer.writerow([result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups,ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups])
+        f.close()
+    else:
+        f.close()
 
 
 def read_controller_info(row):
@@ -231,8 +203,8 @@ def start():
         "ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups \n")
     results_file.close()
 
-    decrypt_file(encrypted_controller_list, secret)
-    # reading csv file
+    fc1 = FileCrypto(encrypted_controller_list, controller_list, secret)
+    fc1.decrypt_file()
     print os.path.abspath(controller_list)
     with open(controller_list, 'r') as f:
         if sum(1 for line in f) < 2:
@@ -242,7 +214,7 @@ def start():
         else:
             print("Reading the file...")
     with open(controller_list, 'r') as csvfile1:
-        # csvfile = cryptoTool.decrypt_filestream(csvfile1, secret)
+
         csvreader = csv.reader(csvfile1)
         # os.remove(controller_list)
         next(csvreader)
@@ -275,4 +247,3 @@ if __name__ == '__main__':
     start()
     # enc('temp.csv', 'pass')
     # dec('temp.csv.aes', 'pass')
-

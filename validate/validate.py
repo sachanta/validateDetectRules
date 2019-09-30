@@ -6,20 +6,9 @@ import csv
 import os
 import sys
 
-import funcy
-import base64
-import Crypto.Protocol
-from Crypto.Cipher import AES
-
 from fileCrypto import FileCrypto
 from AppDynamicsREST.appd.request import AppDynamicsClient
 
-# variables
-# controllerURL = 'http://controller4221bare-ddsrikar-ndca8gxk.srv.ravcloud.com:8090'
-# accountName = 'customer1'
-# username = 'admin'
-# password = 'admin'
-# application = 'app1'
 
 loginQuery = '/controller/auth?action=login'
 errorDetectionRulesQuery = '/controller/restui/applicationManagerUiBean/applicationConfiguration/'
@@ -55,8 +44,17 @@ def apply_logger_match_rules(pattern):
 
 
 def validate_error_detection_rules(controller_url, username, password, account_name, app):
+    """
+
+    :param controller_url: str - starts with http or https and includes port number, except for default '80' and '443'
+    :param username: str - User name to authenticate to the controller with.
+    :param password: str - Password for authentication to the controller.
+    :param account_name: str - Account name for multi-tenant controllers. For single-tenant controllers, use
+                        the default value of "customer1".
+    :param app: object - app object containing info of an app
+    :return: none
+    """
     result = 'Pass'
-    write_row = False
     problem_regex = ''
     ignore_exp_match_type = ''
     ignore_exp_match_pattern = ''
@@ -74,48 +72,43 @@ def validate_error_detection_rules(controller_url, username, password, account_n
         ignore_exp_match_pattern = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['extendedMatchPattern']
     if rules['errorConfig']['ignoreExceptionMsgPatterns']:
         ignore_exp_regex_groups = rules['errorConfig']['ignoreExceptionMsgPatterns'][0]['regexGroups']
-    # print('App Name: %s --- IgnoreExceptions MatchType: %r' % (app.name, ignore_exp_match_type))
-    # print('App Name: %s --- IgnoreExceptions MatchPattern: %r' % (app.name, ignore_exp_match_pattern))
-    # print('App Name: %s --- IgnoreExceptions Regex Groups: %r' % (app.name, ignore_exp_regex_groups))
     if rules['errorConfig']['ignoreLoggerMsgPatterns']:
         ignore_logger_match_type = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchType']
     if rules['errorConfig']['ignoreLoggerMsgPatterns']:
         ignore_logger_match_pattern = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['extendedMatchPattern']
     if rules['errorConfig']['ignoreLoggerMsgPatterns']:
         ignore_logger_regex_groups = rules['errorConfig']['ignoreLoggerMsgPatterns'][0]['regexGroups']
-    # print('App Name: %s --- IgnoreLogger MatchType: %r' % (app.name, ignore_logger_match_type))
-    # print('App Name: %s --- IgnoreLogger MatchPattern: %r' % (app.name, ignore_logger_match_pattern))
-    # print('App Name: %s --- IgnoreLogger Regex Groups: %r' % (app.name, ignore_logger_regex_groups))
 
     f = open('results.csv', "a")
+    # csv.writer is used to avoid the issue of incorrect formatting, if the string contains a comma.
+    # In csv.writer, strings containing ',' are padded by ""
     results_writer = csv.writer(f)
     if ignore_exp_match_type == 'REGEX':
         (result1, match1) = apply_exceptions_match_rules(ignore_exp_match_pattern)
         if result1:
             result = 'Fail'
-            # problem_regex = next(iter(match1), set())
             problem_regex = str(match1)
-
-        print ("%r --- %r" % (result1, match1))
     if ignore_logger_match_type == 'REGEX':
         (result2, match2) = apply_logger_match_rules(ignore_logger_match_pattern)
         if result2:
             result = 'Fail'
-            # problem_regex = problem_regex + ", " + next(iter(match2), set())
             problem_regex = str(match2) + " - " + problem_regex
         print ("%r ::: %r" % (result2, match2))
     if ignore_exp_match_type == 'REGEX' or ignore_logger_match_type == 'REGEX':
-        # f.write("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s \n" % (
-        #     result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern,
-        #     ignore_exp_regex_groups,
-        #     ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups))
-        results_writer.writerow([result, problem_regex, controller_url, app.name, ignore_exp_match_type, ignore_exp_match_pattern, ignore_exp_regex_groups,ignore_logger_match_type, ignore_logger_match_pattern, ignore_logger_regex_groups])
+        results_writer.writerow((result, problem_regex, controller_url, app.name, ignore_exp_match_type,
+                                 ignore_exp_match_pattern, ignore_exp_regex_groups, ignore_logger_match_type,
+                                 ignore_logger_match_pattern, ignore_logger_regex_groups))
         f.close()
     else:
         f.close()
 
 
 def read_controller_info(row):
+    """
+
+    :param row: Takes the row from the input file and populates controller fields
+    :return: returns controller fields with values
+    """
     values = []
     count = 0
 
@@ -178,6 +171,10 @@ def get_error_detection_rules(controller_url, username, password, account_name, 
 
 
 def start():
+    """
+    This method will read the input file and begins the validation process
+    :return:
+    """
     logging.info("Starting the program...")
     output_filename = "results.csv"
     controller_list = 'controllers.csv'
@@ -186,7 +183,7 @@ def start():
     if os.path.exists(encrypted_controller_list):
         print("Reading the file ...\n Output file name is %s" % output_filename)
     else:
-        print("File does not exist. Trying to read the default file: 'controllers.csv.aes")
+        print("File does not exist. Trying to read the default file: 'controllers.csv.aes'")
         if os.path.exists("controllers.csv.aes"):
             print("Reading the default file - 'controllers.csv.aes' ... \n Output file name is %s" % output_filename)
             encrypted_controller_list = 'controllers.csv.aes'
@@ -195,6 +192,7 @@ def start():
             sys.exit(0)
     secret = input("Enter the password to decrypt the file: ")
 
+    # Writing the headers row to the output file
     if os.path.exists(output_filename):
         os.remove(output_filename)
     results_file = open(output_filename, "w")
@@ -216,34 +214,28 @@ def start():
     with open(controller_list, 'r') as csvfile1:
 
         csvreader = csv.reader(csvfile1)
-        # os.remove(controller_list)
+        os.remove(controller_list)
         next(csvreader)
         for row in csvreader:
             if len(row) < 4:
                 print ("incomplete controller information: %r" % row)
                 break
             controller_url, username, password, account_name = read_controller_info(row)
+            # Using the AppDynamicsREST SDK, creating a controller object
             cli = get_appdynamics_client(controller_url, username, password, account_name)
+            # Checking if we can login to the controller.
+            # If not, then throw an exception and go for next row
             try:
+                # Get the list of applications in this controller
+                logging.info("Validating the controller - %s" % controller_url)
                 cli.get_applications()
+                for app in cli.get_applications():
+                    logging.info("App Name -- %s" % app.name)
+                    validate_error_detection_rules(controller_url, username, password, account_name, app)
             except requests.exceptions.RequestException as e:
                 logging.error(e)
                 continue
 
-            for app in cli.get_applications():
-                print("App Name -- %s,  App Id -- %s" % (app.name, app.id))
-                validate_error_detection_rules(controller_url, username, password, account_name, app)
-
-
-# def enc(file_name, password):
-#     cryptoTool.encrypt_file(file_name, password)
-#
-#
-# def dec(file_name, password):
-#     cryptoTool.decrypt_file(file_name, password)
-
 
 if __name__ == '__main__':
     start()
-    # enc('temp.csv', 'pass')
-    # dec('temp.csv.aes', 'pass')

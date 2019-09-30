@@ -30,12 +30,6 @@ class FileCrypto(object):
 
     def decrypt_file(self):
 
-        # if isinstance(file_name, str) and isinstance(encrypt_key, str):
-        #     print ("Decrypting the file ...")
-        # else:
-        #     print("Argument to decrpyt_file function is incorrect. Aborting the program!")
-        #     sys.exit(0)
-
         with open(self.input_file, "rb") as encryptedFile:
             chunk_size = 24 * 1024
             encrypted = base64.b64decode(encryptedFile.read(64))
